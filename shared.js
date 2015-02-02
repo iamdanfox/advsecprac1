@@ -78,15 +78,19 @@ module.exports = {
   }
 }
 
-// RSA_PKCS1_PADDING apparently has no randomness... still causing different ciphertexts
-var plain = "Everything is going to be 200 OKEverything is going to be 200 OKEverything is going to be 200 OKEverything is aaaaaaa";
 
+var plain = "Everything is going to be 200 OKEverything is going to be 200 OKEverything is going to be 200 OKEverything is aaaaaaa"+
+"Everything is going to be 200 OKEverything is going to be 200 OKEverything is going to be 200 OKEverything is aaaaaaa"+
+"Everything is going to be 200 OKEverything is going to be 200 OKEverything is going to be 200 OKEverything is aaaaaaa"+
+"Everything is going to be 200 OKEverything is going to be 200 OKEverything is going to be 200 OKEverything is aaaaaaa"+
+"Everything is going to be 200 OKE";
 
-console.log(plain.length);
+console.log(plain.length); // 501 bytes works exactly.
+
 console.log('Encrypt with Public');
 console.log(ursa.RSA_PKCS1_PADDING);
 msg = module.exports.SERVER.PRIVATE_KEY.encrypt(
-    plain, 'utf8', 'base64', 2);
+    plain, 'utf8', 'base64', 2); // this is the 'no-padding mode'
 console.log('encrypted', msg, '\n');
 msg = module.exports.SERVER.PRIVATE_KEY.encrypt(
     plain, 'utf8', 'base64', 2);
