@@ -19,29 +19,28 @@ var respond = function(chunkBody, resolve, reject) {
       return resolve('1' + diffieHellman.getPublicKey('base64'));
       break;
     case 2:
-      console.assert(typeof chunkBody === 'string')
+      console.assert(typeof chunkBody === 'string', 'chunkBody must be a string')
       var serverPublicKey = new Buffer(chunkBody, 'base64');
       try {
-        diffieHellmanSharedSecret = diffieHellman.computeSecret(serverPublicKey, 'base64');
-        console.log('2. computed shared secret: '+diffieHellmanSharedSecret.toString('base64'));
+        diffieHellmanSharedSecret = diffieHellman.computeSecret(serverPublicKey, 'base64').toString('base64');
+        console.log('2. computed shared secret: '+diffieHellmanSharedSecret);
         expectedSeqNumber = expectedSeqNumber + 2;
 
-        // // randomly choose a key
-        // crypto.randomBytes(shared.NUM_RANDOM_BYTES, function(ex, buf) {
-        //   if (ex) reject(ex)
+        // randomly choose a key
+        crypto.randomBytes(shared.NUM_RANDOM_BYTES, function(ex, buf) {
+          if (ex) reject(ex)
 
-        //   var randomKey = buf.toString('base64');
-        //   var asymmetricBit = shared.asymmetricEncrypt(
-        //     shared.CLIENT.PUBLIC_KEY,
-        //     CLIENT_SECRET,
-        //     diffieHellmanSharedSecret
-        //   );
-        //   var v = shared.symmetricEncrypt(randomKey, shared.CLIENT.IDENTITY + asymmetricBit);
+          var randomKey = buf.toString('base64');
+          var asymmetricBit = shared.asymmetricEncrypt(
+            shared.CLIENT.PUBLIC_KEY,
+            CLIENT_SECRET,
+            diffieHellmanSharedSecret
+          );
+          var v = shared.symmetricEncrypt(randomKey, shared.CLIENT.IDENTITY + asymmetricBit);
 
-
-          return resolve('3A')
-        // })
-        // return
+          return resolve('3' + v);
+        });
+        return
       } catch (error) {
         reject(error)
       }

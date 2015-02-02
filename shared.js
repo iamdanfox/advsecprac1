@@ -89,6 +89,7 @@ module.exports = {
 
   // one way. sharedSecret is used for padding.
   asymmetricEncrypt: function(publicKey, payload, sharedSecret) {
+    console.assert(typeof sharedSecret === 'string', 'sharedSecret must be a string');
     // compress payload with hash
     hash = crypto.createHash(HASH_ALG);
     hash.update(payload, 'utf8');
@@ -105,18 +106,22 @@ module.exports = {
   NUM_RANDOM_BYTES: 32,
 
   symmetricEncrypt: function(randomKey, contents) {
+    console.assert(typeof randomKey === 'string', 'randomKey must be a string');
+    console.assert(typeof contents === 'string', 'contents must be a string');
     var key = module.exports.keyFromRandomBytes(randomKey);
     var iv = module.exports.ivFromRandomBytes(randomKey);
     var cipher = crypto.createCipheriv(SYMMETRIC_CIPHER, key, iv);
 
     var f = Buffer.concat([
-        cipher.update('DAN IS GREAT fjaHFJ AHF HJKDFH KJFHJK HSDKHF !!!!!'),
+        cipher.update(contents),
         cipher.final()
     ]);
     return f.toString('base64')
   },
 
   symmetricDecrypt: function(randomKey, base64CipherText) {
+    console.assert(typeof randomKey === 'string', 'randomKey must be a string');
+    console.assert(typeof base64CipherText === 'string', 'base64CipherText must be a string');
     var key = module.exports.keyFromRandomBytes(randomKey);
     var iv = module.exports.ivFromRandomBytes(randomKey);
     var decipher = crypto.createDecipheriv(SYMMETRIC_CIPHER, key, iv);
