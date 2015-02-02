@@ -3,9 +3,11 @@ var fs = require('fs');
 var ursa = require('ursa');
 
 var SYMMETRIC_KEY_LENGTH = 128;
-var RSA_IV_LENGTH = 128;
+var PADDING_LENGTH = 309; // expands to 412 in base64
 var SYMMETRIC_CIPHER = 'aes-128-cbc';
 console.assert(crypto.getCiphers().indexOf(SYMMETRIC_CIPHER) != -1, 'Cipher must be present in openssl');
+var HASH_ALG = 'sha512'; // 88 bits long
+console.assert(crypto.getHashes().indexOf(HASH_ALG) != -1, 'Hash must be present in openssl');
 
 
 
@@ -23,9 +25,9 @@ module.exports = {
   },
 
   // returns a binary buffer!
-  ivFromSharedSecret: function(sharedSecret) {
+  paddingFromSharedSecret: function(sharedSecret) {
     console.assert(typeof sharedSecret === 'string');
-    iv = crypto.pbkdf2Sync(sharedSecret, 'danissupergreat', Math.pow(10,4), IV_LENGTH);
+    iv = crypto.pbkdf2Sync(sharedSecret, 'danissupergreat', Math.pow(10,4), PADDING_LENGTH);
     console.assert(Buffer.isBuffer(iv))
     return iv;
   },
@@ -75,28 +77,21 @@ module.exports = {
   CLIENT: {
     PUBLIC_KEY: ursa.createPrivateKey(fs.readFileSync('./client.key.pem')),
     PRIVATE_KEY: ursa.createPublicKey(fs.readFileSync('./client.pub')),
+  },
+
+  // one way
+  asymmetricEncrypt: function(publicKey, payload, sharedSecret) {
+    // compress payload with hash
+    hash = crypto.createHash(HASH_ALG);
+    hash.update(payload, 'utf8');
+    var digest = hash.digest('base64');
+    console.assert(digest.length === 88)
+
+    var padding = module.exports.paddingFromSharedSecret(sharedSecret).toString('base64')
+    console.assert(padding.length === 412)
+
+    var PADDING_MODE = 2; // interestingly the code for decryption is 1, not 2
+    return publicKey.encrypt(digest + padding + ' ', 'utf8', 'base64', PADDING_MODE);
   }
+
 }
-
-
-var plain = "Everything is going to be 200 OKEverything is going to be 200 OKEverything is going to be 200 OKEverything is aaaaaaa"+
-"Everything is going to be 200 OKEverything is going to be 200 OKEverything is going to be 200 OKEverything is aaaaaaa"+
-"Everything is going to be 200 OKEverything is going to be 200 OKEverything is going to be 200 OKEverything is aaaaaaa"+
-"Everything is going to be 200 OKEverything is going to be 200 OKEverything is going to be 200 OKEverything is aaaaaaa"+
-"Everything is going to be 200 OKE";
-
-console.log(plain.length); // 501 bytes works exactly.
-
-console.log('Encrypt with Public');
-console.log(ursa.RSA_PKCS1_PADDING);
-msg = module.exports.SERVER.PRIVATE_KEY.encrypt(
-    plain, 'utf8', 'base64', 2); // this is the 'no-padding mode'
-console.log('encrypted', msg, '\n');
-msg = module.exports.SERVER.PRIVATE_KEY.encrypt(
-    plain, 'utf8', 'base64', 2);
-console.log('encrypted', msg, '\n');
-
-
-// console.log('Decrypt with Private');
-// msg = publicKey.decrypt(msg, 'base64', 'utf8');
-// console.log('decrypted', msg, '\n');
