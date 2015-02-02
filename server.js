@@ -1,9 +1,9 @@
 var net = require('net');
 var crypto = require('crypto');
+var shared = require('./shared.js');
 
 var SERVER_SECRET = 'I am super secret!';
-var PORT = 8125;
-var DIFFIE_HELLMAN_PRIME = 'KbhkmZowCP8blHg4RYAP95kaIw=='; // length = 150
+
 
 var server = net.createServer(function(socket) { //'connection' listener
   console.log('client connected');
@@ -42,7 +42,7 @@ var server = net.createServer(function(socket) { //'connection' listener
         clientDiffieHellmanKey = new Buffer(body, 'base64');
 
         try {
-          var diffieHellman = crypto.createDiffieHellman(DIFFIE_HELLMAN_PRIME, 'base64');
+          var diffieHellman = crypto.createDiffieHellman(shared.DIFFIE_HELLMAN_PRIME, 'base64');
           diffieHellman.generateKeys();
 
           diffieHellmanSharedSecret = diffieHellman.computeSecret(clientDiffieHellmanKey, 'base64');
@@ -68,36 +68,9 @@ var server = net.createServer(function(socket) { //'connection' listener
     }
   };
 
-  var write = function(response){
-    if (response != null) {
-      console.log('[sending]: "'+response+'"')
-      socket.write(response)
-    } else {
-      console.log('finishing')
-      socket.end()
-    }
-  };
 
-  var abort = function(error){
-    console.error('[ARBORTING] ' + error);
-    socket.end()
-  };
-
-  // handle sequence stuff, aborts if necessary
-  socket.on('data', function(chunk) {
-    console.log('[received]: "' + chunk + '"');
-
-    console.assert(typeof chunk === 'string');
-    var sequenceNumber = parseInt(chunk[0], 10);
-    var chunkBody = chunk.slice(1).toString().trim(); // trailing whitespace!
-
-    if ( expectedSeqNumber === sequenceNumber) {
-      respond(chunkBody, write, abort);
-    } else {
-      console.error('[ABORTING] Invalid chunk. Was expecting sequenceNumber=' + (expectedSeqNumber + 1));
-      console.log('Received: "' + chunk + '"');
-      socket.end()
-    }
+  shared.socketLoop(socket, respond, function() {
+    return expectedSeqNumber;
   });
 
   socket.on('end', function() {
@@ -105,6 +78,6 @@ var server = net.createServer(function(socket) { //'connection' listener
   });
 });
 
-server.listen(PORT, function() {
-  console.log('server bound to ' + PORT);
+server.listen(shared.PORT, function() {
+  console.log('server bound to ' + shared.PORT);
 });

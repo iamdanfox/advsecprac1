@@ -1,15 +1,13 @@
 var net = require('net');
 var crypto = require('crypto');
+var shared = require('./shared.js');
 
 var CLIENT_SECRET = 'I am super secret!';
-var PORT = 8125;
-var DIFFIE_HELLMAN_PRIME = 'KbhkmZowCP8blHg4RYAP95kaIw=='; // length = 150
-
 
 
 var expectedSeqNumber = 0;
 
-var diffieHellman = crypto.createDiffieHellman(DIFFIE_HELLMAN_PRIME, 'base64');
+var diffieHellman = crypto.createDiffieHellman(shared.DIFFIE_HELLMAN_PRIME, 'base64');
 var diffieHellmanSharedSecret;
 
 var respond = function(chunkBody, resolve, reject) {
@@ -26,6 +24,7 @@ var respond = function(chunkBody, resolve, reject) {
         diffieHellmanSharedSecret = diffieHellman.computeSecret(serverPublicKey, 'base64');
         console.log('2. computed shared secret: '+diffieHellmanSharedSecret.toString('base64'));
         expectedSeqNumber = expectedSeqNumber + 2;
+
         return resolve('3A')
       } catch (error) {
         reject(error)
@@ -35,41 +34,11 @@ var respond = function(chunkBody, resolve, reject) {
 }
 
 
-
-var socket;
-
-var abort = function(error) {
-  console.error('[ABORTING] ' + error);
-  socket.end();
-}
-
-var write = function(response) {
-  if (response != null) {
-    console.log('[sending]: "'+response+'"')
-    socket.write(response)
-  } else {
-    socket.end() // clean close
-  }
-}
-
-socket = net.connect({ port: PORT }, function() {
-  respond(null, write, abort)
+var socket = net.connect({ port: shared.PORT }, function() {
+  respond(null, socket.write.bind(this), null);
 });
 
-socket.setEncoding('utf8');
-
-socket.on('data', function(data) {
-  console.log('[received]: "' + data + '"');
-
-  console.assert(typeof data === 'string')
-  var sequenceNumber = parseInt(data[0], 10);
-  var chunkBody = data.toString().slice(1).trim()
-
-  if (expectedSeqNumber === sequenceNumber) {
-    respond(chunkBody, write, abort)
-  } else {
-    console.error('[ABORTING] Invalid chunk. Was expecting sequenceNumber=' + (expectedSeqNumber + 1));
-    console.log('Received: "' + chunk + '"');
-    socket.end()
-  }
+shared.socketLoop(socket, respond, function() {
+  return expectedSeqNumber;
 });
+
