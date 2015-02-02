@@ -82,12 +82,12 @@ module.exports = {
   },
 
   CLIENT: {
-    IDENTITY: 'BOB',
+    IDENTITY: 'Bob',
     PUBLIC_KEY: ursa.createPrivateKey(fs.readFileSync('./client.key.pem')),
     PRIVATE_KEY: ursa.createPublicKey(fs.readFileSync('./client.pub')),
   },
 
-  // one way
+  // one way. sharedSecret is used for padding.
   asymmetricEncrypt: function(publicKey, payload, sharedSecret) {
     // compress payload with hash
     hash = crypto.createHash(HASH_ALG);
@@ -100,38 +100,36 @@ module.exports = {
 
     var PADDING_MODE = 2; // interestingly the code for decryption is 1, not 2
     return publicKey.encrypt(digest + padding + ' ', 'utf8', 'base64', PADDING_MODE);
+  },
+
+  NUM_RANDOM_BYTES: 32,
+
+  symmetricEncrypt: function(randomKey, contents) {
+    var key = module.exports.keyFromRandomBytes(randomKey);
+    var iv = module.exports.ivFromRandomBytes(randomKey);
+    var cipher = crypto.createCipheriv(SYMMETRIC_CIPHER, key, iv);
+
+    var f = Buffer.concat([
+        cipher.update('DAN IS GREAT fjaHFJ AHF HJKDFH KJFHJK HSDKHF !!!!!'),
+        cipher.final()
+    ]);
+    return f.toString('base64')
+  },
+
+  symmetricDecrypt: function(randomKey, base64CipherText) {
+    var key = module.exports.keyFromRandomBytes(randomKey);
+    var iv = module.exports.ivFromRandomBytes(randomKey);
+    var decipher = crypto.createDecipheriv(SYMMETRIC_CIPHER, key, iv);
+
+    var d = Buffer.concat([
+      decipher.update(base64CipherText, 'base64'),
+      decipher.final()
+    ]);
+    return d.toString('utf8');
   }
 
 }
 
-
-crypto.randomBytes(32, function(ex, buf) {
-  if (ex) throw ex
-
-  var buf = buf.toString('base64');
-
-  var key = module.exports.keyFromRandomBytes(buf);
-  var iv = module.exports.ivFromRandomBytes(buf);
-  var cipher = crypto.createCipheriv(SYMMETRIC_CIPHER, key, iv);
-
-  var f = Buffer.concat([
-      cipher.update('DAN IS GREAT fjaHFJ AHF HJKDFH KJFHJK HSDKHF !!!!!'),
-      cipher.final()
-  ]);
-  console.log('A: ' + f.toString('base64'))
-
-
-  var key = module.exports.keyFromRandomBytes(buf);
-  var iv = module.exports.ivFromRandomBytes(buf);
-  var decipher = crypto.createDecipheriv(SYMMETRIC_CIPHER, key, iv);
-
-  var d = Buffer.concat([
-    decipher.update(f),
-    decipher.final()
-  ]);
-
-  console.log('B: ' + d.toString('utf8'))
-})
 
 
 
