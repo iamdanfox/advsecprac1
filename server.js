@@ -58,7 +58,6 @@ var server = net.createServer(function(socket) { //'connection' listener
       case 3:
 
 
-
         expectedSeqNumber = expectedSeqNumber + 2;
         resolve('4SEND 5');
         break;
@@ -69,27 +68,31 @@ var server = net.createServer(function(socket) { //'connection' listener
     }
   };
 
+  var write = function(response){
+    if (response != null) {
+      console.log('[sending]: "'+response+'"')
+      socket.write(response)
+    } else {
+      console.log('finishing')
+      socket.end()
+    }
+  };
+
+  var abort = function(error){
+    console.error('[ARBORTING] ' + error);
+    socket.end()
+  };
+
   // handle sequence stuff, aborts if necessary
   socket.on('data', function(chunk) {
-    console.assert(typeof chunk === 'string');
+    console.log('[received]: "' + chunk + '"');
 
+    console.assert(typeof chunk === 'string');
     var sequenceNumber = parseInt(chunk[0], 10);
     var chunkBody = chunk.slice(1).toString().trim(); // trailing whitespace!
-    console.log('received chunk: "' + chunkBody + '"');
-    if ( expectedSeqNumber === sequenceNumber) {
-      console.log('advanced to expectedSeqNumber ' + expectedSeqNumber + '... responding');
 
-      respond(chunkBody, function(response){
-        if (response != null) {
-          socket.write(response)
-        } else {
-          console.log('finishing')
-          socket.end()
-        }
-      }, function(error){
-        console.error('[ARBORTING] ' + error);
-        socket.end()
-      })
+    if ( expectedSeqNumber === sequenceNumber) {
+      respond(chunkBody, write, abort);
     } else {
       console.error('[ABORTING] Invalid chunk. Was expecting sequenceNumber=' + (expectedSeqNumber + 1));
       console.log('Received: "' + chunk + '"');
