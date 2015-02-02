@@ -1,12 +1,12 @@
 var crypto = require('crypto');
+var fs = require('fs');
+var ursa = require('ursa');
 
 var SYMMETRIC_KEY_LENGTH = 128;
 var RSA_IV_LENGTH = 128;
 var SYMMETRIC_CIPHER = 'aes-128-cbc';
 console.assert(crypto.getCiphers().indexOf(SYMMETRIC_CIPHER) != -1, 'Cipher must be present in openssl');
 
-// RSA_PKCS1_PADDING has no randomness
-// https://github.com/davedoesdev/ursa implements this
 
 
 
@@ -62,5 +62,37 @@ module.exports = {
         abort(data)
       }
     });
+  },
+
+  // 4096 key size
+  // openssl genrsa -out client.pub 4096
+  // openssl rsa -pubout -in client.pub -out client.key.pem
+  SERVER: {
+    PUBLIC_KEY: ursa.createPrivateKey(fs.readFileSync('./server.key.pem')),
+    PRIVATE_KEY: ursa.createPublicKey(fs.readFileSync('./server.pub')),
+  },
+
+  CLIENT: {
+    PUBLIC_KEY: ursa.createPrivateKey(fs.readFileSync('./client.key.pem')),
+    PRIVATE_KEY: ursa.createPublicKey(fs.readFileSync('./client.pub')),
   }
 }
+
+// RSA_PKCS1_PADDING apparently has no randomness... still causing different ciphertexts
+var plain = "Everything is going to be 200 OKEverything is going to be 200 OKEverything is going to be 200 OKEverything is aaaaaaa";
+
+
+console.log(plain.length);
+console.log('Encrypt with Public');
+console.log(ursa.RSA_PKCS1_PADDING);
+msg = module.exports.SERVER.PRIVATE_KEY.encrypt(
+    plain, 'utf8', 'base64', 2);
+console.log('encrypted', msg, '\n');
+msg = module.exports.SERVER.PRIVATE_KEY.encrypt(
+    plain, 'utf8', 'base64', 2);
+console.log('encrypted', msg, '\n');
+
+
+// console.log('Decrypt with Private');
+// msg = publicKey.decrypt(msg, 'base64', 'utf8');
+// console.log('decrypted', msg, '\n');
