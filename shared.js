@@ -2,12 +2,15 @@ var crypto = require('crypto');
 var fs = require('fs');
 var ursa = require('ursa');
 
-var SYMMETRIC_KEY_LENGTH = 128;
-var PADDING_LENGTH = 309; // expands to 412 in base64
-var SYMMETRIC_CIPHER = 'aes-128-cbc';
+var SYMMETRIC_CIPHER = 'aes-256-cbc';
+var SYMMETRIC_CIPHER_KEY_LENGTH = 32;
+var SYMMETRIC_CIPHER_IV = 16;
 console.assert(crypto.getCiphers().indexOf(SYMMETRIC_CIPHER) != -1, 'Cipher must be present in openssl');
-var HASH_ALG = 'sha512'; // 88 bits long
+
+var HASH_ALG = 'sha512';
 console.assert(crypto.getHashes().indexOf(HASH_ALG) != -1, 'Hash must be present in openssl');
+
+var PADDING_LENGTH = 309; // expands to 412 in base64
 
 
 
@@ -18,18 +21,21 @@ module.exports = {
 
   DIFFIE_HELLMAN_PRIME: 'KbhkmZowCP8blHg4RYAP95kaIw==', // length = 150
 
-  // returns a binary buffer!
-  keyFromSharedSecret: function(sharedSecret) {
-    console.assert(typeof sharedSecret === 'string');
-    return crypto.pbkdf2Sync(sharedSecret, 'danisgreat', Math.pow(10,4), SYMMETRIC_KEY_LENGTH);
+  keyFromRandomBytes: function(randomBytes) {
+    console.assert(typeof randomBytes === 'string');
+    return crypto.pbkdf2Sync(randomBytes, 'danisgreat#key', Math.pow(10,4), SYMMETRIC_CIPHER_KEY_LENGTH);
   },
 
-  // returns a binary buffer!
+  ivFromRandomBytes: function(randomBytes) {
+    console.assert(typeof randomBytes === 'string');
+    return crypto.pbkdf2Sync(randomBytes, 'danisgreat#iv', Math.pow(10,4), SYMMETRIC_CIPHER_IV);
+  },
+
   paddingFromSharedSecret: function(sharedSecret) {
     console.assert(typeof sharedSecret === 'string');
     iv = crypto.pbkdf2Sync(sharedSecret, 'danissupergreat', Math.pow(10,4), PADDING_LENGTH);
     console.assert(Buffer.isBuffer(iv))
-    return iv;
+    return iv.toString('base64');
   },
 
   socketLoop: function(socket, responderFunction, expectedSeqNumber) {
@@ -70,11 +76,13 @@ module.exports = {
   // openssl genrsa -out client.pub 4096
   // openssl rsa -pubout -in client.pub -out client.key.pem
   SERVER: {
+    IDENTITY: 'Alice',
     PUBLIC_KEY: ursa.createPrivateKey(fs.readFileSync('./server.key.pem')),
     PRIVATE_KEY: ursa.createPublicKey(fs.readFileSync('./server.pub')),
   },
 
   CLIENT: {
+    IDENTITY: 'BOB',
     PUBLIC_KEY: ursa.createPrivateKey(fs.readFileSync('./client.key.pem')),
     PRIVATE_KEY: ursa.createPublicKey(fs.readFileSync('./client.pub')),
   },
@@ -85,13 +93,46 @@ module.exports = {
     hash = crypto.createHash(HASH_ALG);
     hash.update(payload, 'utf8');
     var digest = hash.digest('base64');
-    console.assert(digest.length === 88)
+    console.assert(digest.length === 88);
 
-    var padding = module.exports.paddingFromSharedSecret(sharedSecret).toString('base64')
-    console.assert(padding.length === 412)
+    var padding = module.exports.paddingFromSharedSecret(sharedSecret);
+    console.assert(padding.length === 412);
 
     var PADDING_MODE = 2; // interestingly the code for decryption is 1, not 2
     return publicKey.encrypt(digest + padding + ' ', 'utf8', 'base64', PADDING_MODE);
   }
 
 }
+
+
+crypto.randomBytes(32, function(ex, buf) {
+  if (ex) throw ex
+
+  var buf = buf.toString('base64');
+
+  var key = module.exports.keyFromRandomBytes(buf);
+  var iv = module.exports.ivFromRandomBytes(buf);
+  var cipher = crypto.createCipheriv(SYMMETRIC_CIPHER, key, iv);
+
+  var f = Buffer.concat([
+      cipher.update('DAN IS GREAT fjaHFJ AHF HJKDFH KJFHJK HSDKHF !!!!!'),
+      cipher.final()
+  ]);
+  console.log('A: ' + f.toString('base64'))
+
+
+  var key = module.exports.keyFromRandomBytes(buf);
+  var iv = module.exports.ivFromRandomBytes(buf);
+  var decipher = crypto.createDecipheriv(SYMMETRIC_CIPHER, key, iv);
+
+  var d = Buffer.concat([
+    decipher.update(f),
+    decipher.final()
+  ]);
+
+  console.log('B: ' + d.toString('utf8'))
+})
+
+
+
+
