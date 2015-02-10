@@ -24,13 +24,12 @@ var respond = function(chunkBody, resolve, reject) {
       try {
         diffieHellmanSharedSecret = diffieHellman.computeSecret(serverPublicKey, 'base64').toString('base64');
         console.log('2. computed shared secret: '+diffieHellmanSharedSecret);
-        expectedSeqNumber = expectedSeqNumber + 2;
 
         // randomly choose a key
         crypto.randomBytes(shared.NUM_RANDOM_BYTES, function(ex, buf) {
-          if (ex) reject(ex)
+          if (ex) return reject(ex)
 
-          var randomKey = buf.toString('base64');
+          randomKey = buf.toString('base64');
           var asymmetricBit = shared.asymmetricEncrypt(
             shared.CLIENT.PUBLIC_KEY,
             CLIENT_SECRET,
@@ -38,6 +37,7 @@ var respond = function(chunkBody, resolve, reject) {
           );
           var v = shared.symmetricEncrypt(randomKey, shared.CLIENT.IDENTITY + asymmetricBit);
 
+          expectedSeqNumber = expectedSeqNumber + 2;
           return resolve('3' + v);
         });
         return
@@ -56,4 +56,3 @@ var socket = net.connect({ port: shared.PORT }, function() {
 shared.socketLoop(socket, respond, function() {
   return expectedSeqNumber;
 });
-

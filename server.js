@@ -30,6 +30,8 @@ var server = net.createServer(function(socket) { //'connection' listener
   var expectedSeqNumber = 1;
 
   var diffieHellmanSharedSecret;
+  var receivedV;
+  var randomKey;
 
   // should resolve with data to send to client.
   // `this` is the client's data
@@ -45,7 +47,7 @@ var server = net.createServer(function(socket) { //'connection' listener
           var diffieHellman = crypto.createDiffieHellman(shared.DIFFIE_HELLMAN_PRIME, 'base64');
           diffieHellman.generateKeys();
 
-          diffieHellmanSharedSecret = diffieHellman.computeSecret(clientDiffieHellmanKey, 'base64');
+          diffieHellmanSharedSecret = diffieHellman.computeSecret(clientDiffieHellmanKey, 'base64').toString('base64');
           console.log('1. computed shared secret: ' + diffieHellmanSharedSecret.toString('base64'));
 
           expectedSeqNumber = expectedSeqNumber + 2;
@@ -56,10 +58,24 @@ var server = net.createServer(function(socket) { //'connection' listener
         }
         break;
       case 3:
+        receivedV = body;
 
+        // randomly choose a key for the response
+        crypto.randomBytes(shared.NUM_RANDOM_BYTES, function(ex, randomBuf) {
+          if (ex) return reject(ex)
 
-        expectedSeqNumber = expectedSeqNumber + 2;
-        resolve('4SEND 5');
+          randomKey = randomBuf.toString('base64');
+          var asymmetricBit = shared.asymmetricEncrypt(
+            shared.SERVER.PUBLIC_KEY,
+            SERVER_SECRET,
+            diffieHellmanSharedSecret
+          );
+          var v = shared.symmetricEncrypt(randomKey, shared.SERVER.IDENTITY + asymmetricBit);
+
+          expectedSeqNumber = expectedSeqNumber + 2;
+          return resolve('4' + v);
+        });
+
         break;
       case 5:
         expectedSeqNumber = null;
