@@ -44,3 +44,19 @@ Then run `node server.js` in one shell and `node client.js` from another.
 The client will initiate the protocol with the server.  The server's key pair is `server.key.pem` and `server.pub`; the client will never attempt to access `server.key.pem` and vice versa.
 
 Both `server.js` and `client.js` are structured as primitive state machines.  Messages are passed back and forth in base64 encoding for ease of debugging.  Each message starts with a sequence number (from 1 to 6).
+
+
+Analysis
+--------
+
+ * If the protocol is truncated, one participant can learn the value of (sA == sB) without the other learning anything.
+   This is unavoidable.
+ * This does leak information about the length of the secrets since they are encrypted with RSA. (Could be solved by a compression function, although this introduces a probability of collisions.)
+ * If secrets are pooled from a very small domain, brute force attacks become very feasible.
+ * Approximate equality is impossible.
+
+ * Dishonest B can't lean sA since sA is only ever transmitted encrypted with A's public key (which the dishonest B can't decrypt).
+ * A semi-dishonest member is detected after sending their kX (because it must decrypt their v correctly).  Given the first transmission was truthful, this assurance relies on the difficulty of finding another decryption key kX' that decrypts v to a string of the correct format.
+ * Doesn't require repeats for useful probability guarantees.  (6 messages exchanged gives strong probability)
+ * Secure channel assumption prevents MITM/impersonation attacks
+ * The Diffie-Hellman key exchange at the beginning makes the protocol replay resistant.
