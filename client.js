@@ -9,6 +9,7 @@ var expectedSeqNumber = 0;
 
 var diffieHellman = crypto.createDiffieHellman(shared.DIFFIE_HELLMAN_PRIME, 'base64');
 var diffieHellmanSharedSecret;
+var receivedV;
 var randomKey;
 
 var respond = function(chunkBody, resolve, reject) {
@@ -44,6 +45,14 @@ var respond = function(chunkBody, resolve, reject) {
       } catch (error) {
         reject(error)
       }
+      break;
+    case 4:
+      // Store other party's V
+      receivedV = chunkBody;
+
+      // send the randomKey over
+      expectedSeqNumber = expectedSeqNumber + 2;
+      resolve('5' + randomKey);
       break;
   }
 }

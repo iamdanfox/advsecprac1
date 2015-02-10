@@ -37,11 +37,11 @@ var server = net.createServer(function(socket) { //'connection' listener
   // `this` is the client's data
   // just received a chunk with seq no === `expectedSequenceNumber``
   // resolve with null to close cleanly.
-  var respond = function(body, resolve, reject) {
-    console.assert(typeof body === 'string')
+  var respond = function(chunkBody, resolve, reject) {
+    console.assert(typeof chunkBody === 'string')
     switch(expectedSeqNumber) {
       case 1:
-        clientDiffieHellmanKey = new Buffer(body, 'base64');
+        clientDiffieHellmanKey = new Buffer(chunkBody, 'base64');
 
         try {
           var diffieHellman = crypto.createDiffieHellman(shared.DIFFIE_HELLMAN_PRIME, 'base64');
@@ -58,7 +58,7 @@ var server = net.createServer(function(socket) { //'connection' listener
         }
         break;
       case 3:
-        receivedV = body;
+        receivedV = chunkBody;
 
         // randomly choose a key for the response
         crypto.randomBytes(shared.NUM_RANDOM_BYTES, function(ex, randomBuf) {
@@ -78,8 +78,33 @@ var server = net.createServer(function(socket) { //'connection' listener
 
         break;
       case 5:
-        expectedSeqNumber = null;
-        resolve();
+        // receive the other's random key, perform the checks, send back my random key
+        var othersRandomKey = chunkBody;
+
+        // perform the checks (ie decrypt and check identity)
+        var decryptedV = shared.symmetricDecrypt(othersRandomKey, receivedV);
+        if (decryptedV.indexOf(shared.CLIENT.IDENTITY) !== -1) {
+          // correctly formatted
+          var theirRSAPart = decryptedV.substr(shared.CLIENT.IDENTITY.length);
+          var compareRSAPart = shared.asymmetricEncrypt(
+            shared.CLIENT.PUBLIC_KEY,
+            SERVER_SECRET,
+            diffieHellmanSharedSecret
+          );
+
+          if (theirRSAPart === compareRSAPart) {
+            console.log('\n\n[PROTOCOL FINISHED]: same secrets');
+          } else {
+            console.log('\n\n[PROTOCOL FINISHED]: different secrets');
+          }
+          expectedSeqNumber = expectedSeqNumber + 2;
+          resolve('6' + randomKey);
+        } else {
+          expectedSeqNumber = null;
+          console.log('[ABORTING PROTOCOL]: dishonesty suspected');
+          reject('Expected decryptedV to start with ' + shared.CLIENT.IDENTITY +
+            ' instead, it started with ' + decryptedV.substr(0, shared.CLIENT.IDENTITY.length));
+        }
         break;
     }
   };

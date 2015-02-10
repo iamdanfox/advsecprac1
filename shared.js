@@ -17,7 +17,7 @@ var PADDING_LENGTH = 309; // expands to 412 in base64
 
 module.exports = {
 
-  PORT: 8125,
+  PORT: 4321,
 
   DIFFIE_HELLMAN_PRIME: 'KbhkmZowCP8blHg4RYAP95kaIw==', // length = 150
 
