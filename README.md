@@ -33,3 +33,14 @@ dishonesty from the first.
  4. A and B send their chosen `kA` and `kB` from step 2.
      * The receiving party can check that this decrypts the `v` that they received correctly (and thereby detect dishonesty)
      * Finally, the receiving part can encrypt their secret with the other party's public key and the agreed `sharedPadding` to determine whether (sA == sB)
+
+Implementation description
+--------------------------
+
+(Written for node version v0.10.31). First run `npm install`.
+
+Then run `node server.js` in one shell and `node client.js` from another.
+
+The client will initiate the protocol with the server.  The server's key pair is `server.key.pem` and `server.pub`; the client will never attempt to access `server.key.pem` and vice versa.
+
+Both `server.js` and `client.js` are structured as primitive state machines.  Messages are passed back and forth in base64 encoding for ease of debugging.  Each message starts with a sequence number (from 1 to 6).
