@@ -12,7 +12,7 @@ var diffieHellmanSharedSecret;
 var receivedV;
 var randomKey;
 
-var respond = function(chunkBody, resolve, reject) {
+var respond = function(chunkBody, resolve, reject, done) {
   switch (expectedSeqNumber) {
     case 0:
       diffieHellman.generateKeys()
@@ -53,6 +53,35 @@ var respond = function(chunkBody, resolve, reject) {
       // send the randomKey over
       expectedSeqNumber = expectedSeqNumber + 2;
       resolve('5' + randomKey);
+      break;
+    case 6:
+      // receive the other's random key, perform the checks, terminate
+      var othersRandomKey = chunkBody;
+
+      // perform the checks (ie decrypt and check identity)
+      var decryptedV = shared.symmetricDecrypt(othersRandomKey, receivedV);
+      if (decryptedV.indexOf(shared.SERVER.IDENTITY) !== -1) {
+        // correctly formatted
+        var theirRSAPart = decryptedV.substr(shared.SERVER.IDENTITY.length);
+        var compareRSAPart = shared.asymmetricEncrypt(
+          shared.SERVER.PUBLIC_KEY,
+          CLIENT_SECRET,
+          diffieHellmanSharedSecret
+        );
+
+        if (theirRSAPart === compareRSAPart) {
+          console.log('\n\n[PROTOCOL FINISHED]: same secrets');
+        } else {
+          console.log('\n\n[PROTOCOL FINISHED]: different secrets');
+        }
+        expectedSeqNumber = expectedSeqNumber + 2;
+      } else {
+        expectedSeqNumber = null;
+        console.error('[ABORTING PROTOCOL]: dishonesty suspected');
+        console.error('Expected decryptedV to start with ' + shared.SERVER.IDENTITY +
+          ' instead, it started with ' + decryptedV.substr(0, shared.SERVER.IDENTITY.length));
+      }
+      return done();
       break;
   }
 }

@@ -56,6 +56,11 @@ module.exports = {
       }
     }
 
+    var done = function() {
+      console.log('terminating');
+      socket.end();
+    }
+
     socket.on('data', function(data) {
       console.log('[received]: "' + data + '"');
 
@@ -63,11 +68,11 @@ module.exports = {
       var sequenceNumber = parseInt(data[0], 10);
 
       if (expectedSeqNumber() === sequenceNumber) {
-        var chunkBody = data.toString().slice(1).trim()
-        responderFunction(chunkBody, write, abort)
+        var chunkBody = data.toString().slice(1).trim();
+        responderFunction(chunkBody, write, abort, done);
       } else {
         console.error('[ABORTING] Invalid chunk. Was expecting sequenceNumber=' + (expectedSeqNumber() + 1));
-        abort(data)
+        abort(data);
       }
     });
   },
@@ -134,8 +139,3 @@ module.exports = {
   }
 
 }
-
-
-
-
-

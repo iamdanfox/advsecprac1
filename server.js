@@ -9,24 +9,6 @@ var server = net.createServer(function(socket) { //'connection' listener
   console.log('client connected');
   socket.setEncoding('utf8');
 
-  /* Expected server (B) flow:
-
-    1. receive client's diffe hellman public key
-      2. create server's diffie hellman, send public key, compute shared secret
-    3. receive client's VA
-      4. choose Kb, send VB
-    5. receive Ka...
-      - if not honest - abort
-      - if honest
-        - if Wa matches server's secret
-          6. send kb
-          - return true
-        - else
-          6. send kb
-          - return false
-
-  */
-
   var expectedSeqNumber = 1;
 
   var diffieHellmanSharedSecret;
@@ -98,11 +80,11 @@ var server = net.createServer(function(socket) { //'connection' listener
             console.log('\n\n[PROTOCOL FINISHED]: different secrets');
           }
           expectedSeqNumber = expectedSeqNumber + 2;
-          resolve('6' + randomKey);
+          return resolve('6' + randomKey);
         } else {
           expectedSeqNumber = null;
           console.log('[ABORTING PROTOCOL]: dishonesty suspected');
-          reject('Expected decryptedV to start with ' + shared.CLIENT.IDENTITY +
+          return reject('Expected decryptedV to start with ' + shared.CLIENT.IDENTITY +
             ' instead, it started with ' + decryptedV.substr(0, shared.CLIENT.IDENTITY.length));
         }
         break;
