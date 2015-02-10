@@ -82,14 +82,14 @@ module.exports = {
   // openssl rsa -pubout -in client.pub -out client.key.pem
   SERVER: {
     IDENTITY: 'Alice',
-    PUBLIC_KEY: ursa.createPrivateKey(fs.readFileSync('./server.key.pem')),
-    PRIVATE_KEY: ursa.createPublicKey(fs.readFileSync('./server.pub')),
+    PUBLIC_KEY: ursa.createPrivateKey(fs.readFileSync('./keys/server.key.pem')),
+    PRIVATE_KEY: ursa.createPublicKey(fs.readFileSync('./keys/server.pub')),
   },
 
   CLIENT: {
     IDENTITY: 'Bob',
-    PUBLIC_KEY: ursa.createPrivateKey(fs.readFileSync('./client.key.pem')),
-    PRIVATE_KEY: ursa.createPublicKey(fs.readFileSync('./client.pub')),
+    PUBLIC_KEY: ursa.createPrivateKey(fs.readFileSync('./keys/client.key.pem')),
+    PRIVATE_KEY: ursa.createPublicKey(fs.readFileSync('./keys/client.pub')),
   },
 
   // one way. sharedSecret is used for padding.
