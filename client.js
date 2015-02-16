@@ -60,7 +60,7 @@ var respond = function(chunkBody, resolve, reject, done) {
 
       // perform the checks (ie decrypt and check identity)
       var decryptedV = shared.symmetricDecrypt(othersRandomKey, receivedV);
-      if (decryptedV.indexOf(shared.SERVER.IDENTITY) !== -1) {
+      if (decryptedV.indexOf(shared.SERVER.IDENTITY) === 0) {
         // correctly formatted
         var theirRSAPart = decryptedV.substr(shared.SERVER.IDENTITY.length);
         var compareRSAPart = shared.asymmetricEncrypt(
